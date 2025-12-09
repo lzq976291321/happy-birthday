@@ -2,11 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Gesture Particles</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #000; }
+      body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        background-color: #000;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+        touch-action: none;
+      }
+      /* Prevent iOS bouncing */
+      body {
+        position: fixed;
+        width: 100%;
+      }
     </style>
   <script type="importmap">
 {

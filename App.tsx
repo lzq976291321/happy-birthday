@@ -6,9 +6,13 @@ import { HandLandmarker, FilesetResolver, DrawingUtils } from "@mediapipe/tasks-
 import ParticleSystem from './components/ParticleSystem';
 import { HandState, GestureType } from './types';
 
+// Detect if mobile device
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+
 const videoConstraints = {
-  width: 640,
-  height: 480,
+  width: isMobile ? 480 : 640,
+  height: isMobile ? 360 : 480,
   facingMode: "user"
 };
 
@@ -20,6 +24,7 @@ const App: React.FC = () => {
     position: { x: 0, y: 0 }
   });
   const [loading, setLoading] = useState(true);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const handLandmarkerRef = useRef<HandLandmarker | null>(null);
 
   // Initialize MediaPipe
@@ -135,50 +140,79 @@ const App: React.FC = () => {
     });
   };
 
+  // Handle camera errors
+  const handleUserMediaError = (error: string | DOMException) => {
+    console.error("Camera error:", error);
+    if (isWeChat) {
+      setCameraError("请在微信中允许使用摄像头权限");
+    } else {
+      setCameraError("无法访问摄像头，请检查权限设置");
+    }
+  };
+
   return (
     <div className="relative w-full h-screen bg-black text-white overflow-hidden">
       {/* 3D Scene */}
       <div className="absolute inset-0 z-10">
-        <Canvas camera={{ position: [0, 0, 30], fov: 45 }}>
+        <Canvas camera={{
+          position: [0, 0, isMobile ? 50 : 30],
+          fov: isMobile ? 60 : 45
+        }}>
           <color attach="background" args={['#050505']} />
           <ambientLight intensity={0.5} />
           <pointLight position={[10, 10, 10]} />
-          <ParticleSystem handState={handState} />
+          <ParticleSystem handState={handState} isMobile={isMobile} />
           <OrbitControls enableZoom={false} enablePan={false} />
         </Canvas>
       </div>
 
       {/* UI Overlay */}
-      <div className="absolute top-4 left-4 z-20 bg-black/50 p-4 rounded-xl backdrop-blur-md border border-white/10">
-        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+      <div className={`absolute z-20 bg-black/50 backdrop-blur-md border border-white/10 rounded-xl ${
+        isMobile
+          ? 'top-2 left-2 right-2 p-3'
+          : 'top-4 left-4 p-4'
+      }`}>
+        <h1 className={`font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 ${
+          isMobile ? 'text-base' : 'text-xl'
+        }`}>
           Particle Gestures
         </h1>
-        <div className="mt-2 text-sm text-gray-300 space-y-1">
+        <div className={`mt-2 text-gray-300 ${isMobile ? 'text-xs space-y-0.5' : 'text-sm space-y-1'}`}>
           <p>👆 1 Finger: <span className="text-white font-bold">生</span></p>
           <p>✌️ 2 Fingers: <span className="text-white font-bold">日</span></p>
           <p>🤟 3 Fingers: <span className="text-white font-bold">快</span></p>
           <p>🖖 4 Fingers: <span className="text-white font-bold">乐</span></p>
-          <p>✊/🖐️ Open/Close: <span className="text-white font-bold">Expand/Contract</span></p>
+          {!isMobile && <p>✊/🖐️ Open/Close: <span className="text-white font-bold">Expand/Contract</span></p>}
         </div>
-        <div className="mt-4 text-xs font-mono text-gray-400">
+        <div className={`mt-2 font-mono text-gray-400 ${isMobile ? 'text-xs' : 'text-xs'}`}>
           Current: {handState.gesture !== GestureType.NONE ? `State ${handState.gesture}` : "Free Mode"}
         </div>
       </div>
 
-      {/* Hidden Webcam for processing, visible small preview */}
-      <div className="absolute bottom-4 right-4 z-20 w-48 rounded-lg overflow-hidden border-2 border-white/20">
+      {/* Webcam preview */}
+      <div className={`absolute z-20 rounded-lg overflow-hidden border-2 border-white/20 ${
+        isMobile
+          ? 'bottom-2 right-2 w-32'
+          : 'bottom-4 right-4 w-48'
+      }`}>
         <Webcam
           ref={webcamRef}
           audio={false}
-          width={192}
-          height={144}
+          width={isMobile ? 128 : 192}
+          height={isMobile ? 96 : 144}
           screenshotFormat="image/jpeg"
           videoConstraints={videoConstraints}
-          className="w-full h-auto transform -scale-x-100" // Mirror for user feel
+          onUserMediaError={handleUserMediaError}
+          className="w-full h-auto transform -scale-x-100"
         />
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-            <span className="text-xs text-white">Loading Vision...</span>
+            <span className={`text-white ${isMobile ? 'text-xs' : 'text-xs'}`}>Loading...</span>
+          </div>
+        )}
+        {cameraError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-red-900/80 p-2">
+            <span className="text-white text-xs text-center">{cameraError}</span>
           </div>
         )}
       </div>

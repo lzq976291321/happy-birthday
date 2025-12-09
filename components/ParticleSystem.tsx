@@ -1,29 +1,35 @@
-import React, { useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
-import { HandState, GestureType } from '../types';
-import { samplePointsFromText, generateSphereCloud } from '../utils/textSampler';
+import React, { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import * as THREE from "three";
+import { HandState, GestureType } from "../types";
+import {
+  samplePointsFromText,
+  generateSphereCloud,
+} from "../utils/textSampler";
 
 interface ParticleSystemProps {
   handState: HandState;
+  isMobile: boolean;
 }
 
 const PARTICLE_COUNT = 3000;
 const LERP_SPEED = 0.08;
 
-const ParticleSystem: React.FC<ParticleSystemProps> = ({ handState }) => {
+const ParticleSystem: React.FC<ParticleSystemProps> = ({ handState, isMobile }) => {
   const pointsRef = useRef<THREE.Points>(null);
-  
+
   // Pre-calculate target positions for all states
+  // Use smaller text size for mobile to ensure full display
+  const textSize = isMobile ? 120 : 140;
   const targets = useMemo(() => {
     return {
       sphere: generateSphereCloud(PARTICLE_COUNT, 8),
-      char1: samplePointsFromText('生', PARTICLE_COUNT, 140),
-      char2: samplePointsFromText('日', PARTICLE_COUNT, 140),
-      char3: samplePointsFromText('快', PARTICLE_COUNT, 140),
-      char4: samplePointsFromText('乐', PARTICLE_COUNT, 140),
+      char1: samplePointsFromText("生", PARTICLE_COUNT, textSize),
+      char2: samplePointsFromText("日", PARTICLE_COUNT, textSize),
+      char3: samplePointsFromText("快", PARTICLE_COUNT, textSize),
+      char4: samplePointsFromText("乐", PARTICLE_COUNT, textSize),
     };
-  }, []);
+  }, [textSize]);
 
   // Initialize current positions array
   const positions = useMemo(() => {
@@ -38,7 +44,8 @@ const ParticleSystem: React.FC<ParticleSystemProps> = ({ handState }) => {
   useFrame((state) => {
     if (!pointsRef.current) return;
 
-    const currentPositions = pointsRef.current.geometry.attributes.position.array as Float32Array;
+    const currentPositions = pointsRef.current.geometry.attributes.position
+      .array as Float32Array;
     let targetPositions: Float32Array;
 
     // 1. Determine Target Shape based on Gesture
@@ -65,20 +72,20 @@ const ParticleSystem: React.FC<ParticleSystemProps> = ({ handState }) => {
 
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const idx = i * 3;
-      
+
       let tx = targetPositions[idx];
       let ty = targetPositions[idx + 1];
       let tz = targetPositions[idx + 2];
 
       // 3. Apply Hand Interactions
-      
+
       if (handState.gesture === GestureType.NONE) {
         // Mode: Expansion/Contraction (Breathing)
         // handState.openness: 0 (closed) -> 1 (open)
-        
+
         // Base sphere expansion
-        const expansionFactor = 0.5 + (handState.openness * 1.5); 
-        
+        const expansionFactor = 0.5 + handState.openness * 1.5;
+
         tx *= expansionFactor;
         ty *= expansionFactor;
         tz *= expansionFactor;
@@ -94,7 +101,7 @@ const ParticleSystem: React.FC<ParticleSystemProps> = ({ handState }) => {
       }
 
       // 4. Lerp Logic (Physics update)
-      
+
       // Calculate distance to target
       const dx = tx - currentPositions[idx];
       const dy = ty - currentPositions[idx + 1];
@@ -108,10 +115,18 @@ const ParticleSystem: React.FC<ParticleSystemProps> = ({ handState }) => {
 
     // Mark geometry as needing update
     pointsRef.current.geometry.attributes.position.needsUpdate = true;
-    
+
     // Rotate entire group slightly based on hand position (Parallax effect)
-    pointsRef.current.rotation.x = THREE.MathUtils.lerp(pointsRef.current.rotation.x, handState.position.y * 0.2, 0.1);
-    pointsRef.current.rotation.y = THREE.MathUtils.lerp(pointsRef.current.rotation.y, handState.position.x * 0.2, 0.1);
+    pointsRef.current.rotation.x = THREE.MathUtils.lerp(
+      pointsRef.current.rotation.x,
+      handState.position.y * 0.2,
+      0.1
+    );
+    pointsRef.current.rotation.y = THREE.MathUtils.lerp(
+      pointsRef.current.rotation.y,
+      handState.position.x * 0.2,
+      0.1
+    );
   });
 
   return (
@@ -125,7 +140,7 @@ const ParticleSystem: React.FC<ParticleSystemProps> = ({ handState }) => {
         />
       </bufferGeometry>
       <pointsMaterial
-        size={0.25}
+        size={isMobile ? 0.3 : 0.25}
         color="#4fc3f7"
         transparent
         opacity={0.8}
